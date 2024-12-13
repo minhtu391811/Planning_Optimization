@@ -105,6 +105,8 @@ def genetic_algorithm(classes, teachers, subjects, periods, population_size=100,
         fitness_scores.sort(key=lambda x: x[1], reverse=True)
         parent1 = fitness_scores[0][0]  # Best individual
         parent2 = fitness_scores[1][0]  # Second-best individual
+        
+        current_fitness, conflicting_idxs = evaluate(parent1, classes, teachers, periods)
 
         # Crossover to generate offspring
         next_population = []
@@ -115,6 +117,8 @@ def genetic_algorithm(classes, teachers, subjects, periods, population_size=100,
             next_population.append(child)
 
         population = next_population
+        
+        print("Generation:", gen + 1, ", Score:", current_fitness, ", conflicts:", len(conflicting_idxs))
 
     # Evaluate and return the best solution
     best_schedule = max(population, key=lambda ind: evaluate(ind, classes, teachers, periods)[0])
@@ -140,4 +144,4 @@ if __name__ == "__main__":
             print(cls, sub, start, teacher)
 
     elapsed_time = end_time - start_time
-    # print(f"Elapsed time: {elapsed_time:.4f} seconds")
+    print(f"Elapsed time: {elapsed_time:.4f} seconds")
