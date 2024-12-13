@@ -1,0 +1,2 @@
+# Planning_Optimization_Group3_Problem10_TimeTableAssignment
+ Project of the course Planning_Optimization at HUST

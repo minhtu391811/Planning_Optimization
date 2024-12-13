@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.json": "django-html",
+        "cstdint": "cpp"
+    }
+}

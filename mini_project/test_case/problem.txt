@@ -1,0 +1,19 @@
+Có T giáo viên 1,2,…, T cần được phân công dạy các môn học cho các lớp. 
+Có M môn học 1, 2, …, M
+Có N lớp học 1, 2,…, N. Mỗi lớp học có 1 danh sách các môn học (lấy từ 1, 2, …, M). Mỗi lớp học gắn với 1 môn được gọi là lớp-môn
+Mỗi môn học m có số tiết là d(m) 
+Mỗi giáo viên t có danh sách các môn mà giáo viên đó có thể dạy 
+Có 5 ngày học, mỗi ngày chia thành 2 buổi (sáng và chiều), mỗi buổi học được chia thành 6 tiết 
+Cần xây dựng kế hoạch phân công giáo viên cũng như thời khóa biểu (ngày/tiết bắt đầu) cho mỗi lớp-môn thỏa mãn:
+Các lớp-môn của cùng lớp thì không được xếp thời khóa biểu chồng lấp lên nhau
+Các lớp-môn được phân công cho cùng giáo viên cũng không được xếp thời khóa biểu chồng lấp lên nhau
+Tổng số lớp-môn được phân kíp và giáo viên là lớn nhất
+
+Input
+    Dòng 1: T (số giáo viên), N (số lớp), M (số môn)  (1 <= N <= 100, 1 <= M <= 100, 1 <= T <= 100)
+    Dòng i+1 (i = 1,…, N): ghi danh sách các môn mà lớp i cần phải học (kết thúc bởi 0)
+    Dòng thứ t + N + 1 (t = 1,2,.., T): ghi danh sách các môn mà giáo viên t có thể dạy (kết thúc bởi 0)
+    Dòng thứ N + T + 2: ghi d(m) là số tiết của môn m (m = 1,…, M)
+Output
+    Dòng 1: ghi số nguyên dương K
+    Dòng k + 1 (k = 1, . . ., K): ghi 4 số nguyên dương x, y, u, v trong đó lớp-môn x-y được phân vào kíp bắt đầu là u và giáo viên dạy là v
