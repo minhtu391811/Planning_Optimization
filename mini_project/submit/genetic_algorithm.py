@@ -95,7 +95,7 @@ def select_population(population, classes, teachers, periods, population_size):
     return selected
 
 
-def genetic_algorithm(classes, teachers, subjects, periods, population_size=100, generations=700, mutation_rate=0.1):
+def genetic_algorithm(classes, teachers, subjects, periods, population_size=100, generations=700, mutation_rate=0.5):
     # Initial population
     population = [generate_individual(classes, teachers, subjects, periods) for _ in range(population_size)]
     
@@ -107,6 +107,8 @@ def genetic_algorithm(classes, teachers, subjects, periods, population_size=100,
         parent2 = fitness_scores[1][0]  # Second-best individual
         
         current_fitness, conflicting_idxs = evaluate(parent1, classes, teachers, periods)
+        if not conflicting_idxs:
+            break
 
         # Crossover to generate offspring
         next_population = []
@@ -118,7 +120,7 @@ def genetic_algorithm(classes, teachers, subjects, periods, population_size=100,
 
         population = next_population
         
-        print("Generation:", gen + 1, ", Score:", current_fitness, ", conflicts:", len(conflicting_idxs))
+        # print("Generation:", gen + 1, ", Score:", current_fitness, ", conflicts:", len(conflicting_idxs))
 
     # Evaluate and return the best solution
     best_schedule = max(population, key=lambda ind: evaluate(ind, classes, teachers, periods)[0])
@@ -144,4 +146,4 @@ if __name__ == "__main__":
             print(cls, sub, start, teacher)
 
     elapsed_time = end_time - start_time
-    print(f"Elapsed time: {elapsed_time:.4f} seconds")
+    # print(f"Elapsed time: {elapsed_time:.4f} seconds")
