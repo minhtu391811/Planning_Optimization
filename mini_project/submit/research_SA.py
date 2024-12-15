@@ -1,36 +1,36 @@
 import random
 import time
 import math
+import statistics
 from collections import defaultdict
+from tabulate import tabulate  # Thư viện hiển thị bảng
 
-def read_input():
+def read_input(file_path):
     """
-    Read input data:
-    - First line: T, N, M (number of teachers, classes, subjects)
-    - Next N lines: List of subjects each class needs (ends with 0)
-    - Next T lines: List of subjects each teacher can teach (ends with 0)
-    - Final line: Number of periods required for each subject d(m) (m = 1, ..., M)
+    Read input data from a file.
     """
-    T, N, M = map(int, input().split())
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+    
+    T, N, M = map(int, lines[0].split())
 
     # Classes' subject requirements
-    classes = {i: list(map(int, input().split()))[:-1] for i in range(1, N + 1)}
+    classes = {i: list(map(int, lines[i].split()))[:-1] for i in range(1, N + 1)}
 
     # Teachers' capabilities and subjects they can teach
     teachers = {}
     subjects = defaultdict(list)
     for t in range(1, T + 1):
-        data = list(map(int, input().split()))[:-1]
+        data = list(map(int, lines[N + t].split()))[:-1]
         teachers[t] = data
         for sub in data:
             subjects[sub].append(t)
 
     # Periods required for each subject
-    periods = {i + 1: int(p) for i, p in enumerate(map(int, input().split()))}
+    periods = {i + 1: int(p) for i, p in enumerate(map(int, lines[-1].split()))}
 
     return T, N, M, classes, teachers, subjects, periods
 
-# Optimized evaluation function
 def evaluate(schedule, periods):
     """
     Evaluate the schedule for overlaps.
@@ -60,7 +60,6 @@ def evaluate(schedule, periods):
     score = len(schedule) - len(conflicting_idxs)
     return score, conflicting_idxs
 
-# Optimized neighbor selection
 def select_neighbor(schedule, subjects, periods, conflicting_idxs, temperature):
     """
     Generate a neighbor schedule by resolving conflicts.
@@ -79,7 +78,6 @@ def select_neighbor(schedule, subjects, periods, conflicting_idxs, temperature):
 
     return new_schedule
 
-# Simulated Annealing Algorithm
 def simulated_annealing(classes, subjects, periods, start_time, max_iterations=10000, initial_temp=100):
     """
     Perform Simulated Annealing to optimize the schedule.
@@ -107,8 +105,6 @@ def simulated_annealing(classes, subjects, periods, start_time, max_iterations=1
 
         if new_score > current_score or random.random() < math.exp((new_score - current_score) / temp):
             schedule, current_score, conflicting_idxs = new_schedule, new_score, new_conflicting_idxs
-            
-        print("Iteration:", it + 1, ", Score:", current_score, ", conflicts:", len(conflicting_idxs))
 
         temp *= 0.999  # Cooling schedule
 
@@ -116,17 +112,28 @@ def simulated_annealing(classes, subjects, periods, start_time, max_iterations=1
 
 # Main Execution
 if __name__ == "__main__":
-    T, N, M, classes, teachers, subjects, periods = read_input()
+    num_files = 10  # Number of input files
+    scores_summary = []
 
-    start_time = time.time()
-    best_schedule, score = simulated_annealing(classes, subjects, periods, start_time)
-    best_score, conflicting_idxs = evaluate(best_schedule, periods)
-    elapsed_time = time.time() - start_time
+    for i in range(1, num_files + 1):
+        file_path = f"F:/ITTN - Project/Planning_Optimization/mini_project/test_case/data{i}.txt"
+        T, N, M, classes, teachers, subjects, periods = read_input(file_path)
 
-    print(score)
-    for idx in range(len(best_schedule)):
-        if idx not in conflicting_idxs:
-            cls, sub, start, teacher = best_schedule[idx]
-            print(cls, sub, start, teacher)
+        scores = []
+        num_runs = 10  # Number of runs per dataset
 
-    print(f"Elapsed time: {elapsed_time:.4f} seconds")
+        for _ in range(num_runs):
+            start_time = time.time()
+            _, score = simulated_annealing(classes, subjects, periods, start_time)
+            scores.append(score)
+
+        max_score = max(scores)
+        min_score = min(scores)
+        mean_score = statistics.mean(scores)
+        std_dev = statistics.stdev(scores) if len(scores) > 1 else 0
+
+        scores_summary.append([f"data{i}.txt", max_score, min_score, mean_score, round(std_dev,2)])
+
+    # Print results in a table
+    print("\n=== Results Summary ===")
+    print(tabulate(scores_summary, headers=["Dataset", "Max Score", "Min Score", "Average Score", "Std Dev"]))
