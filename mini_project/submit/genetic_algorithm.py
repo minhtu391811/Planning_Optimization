@@ -2,6 +2,12 @@ import random
 import time
 from collections import defaultdict
 
+# Initiate parameters
+POPULATION_SIZE = 100
+MAX_GENERATION = 1000
+MUTATION_RATE = 0.5
+TIME_LIMIT = 20
+
 # Input function to read input data
 def read_input():
     """
@@ -124,7 +130,7 @@ def select_population(population, classes, teachers, periods, population_size):
     return selected
 
 # Genetic Algorithm function
-def genetic_algorithm(classes, teachers, subjects, periods, start_time, population_size=100, generations=1000, mutation_rate=0.5):
+def genetic_algorithm(classes, teachers, subjects, periods, start_time, population_size=POPULATION_SIZE, generations=MAX_GENERATION, mutation_rate=MUTATION_RATE):
     """
     Run the genetic algorithm to find the optimal schedule.
     """
@@ -144,7 +150,7 @@ def genetic_algorithm(classes, teachers, subjects, periods, start_time, populati
         end_time = time.time()
         
         # Termination condition: no conflicts or time limit exceeded
-        if not conflicting_idxs or end_time - start_time > 20.0:
+        if not conflicting_idxs or end_time - start_time > TIME_LIMIT:
             break
 
         # Generate next generation through crossover and mutation

@@ -3,6 +3,13 @@ import time
 import math
 from collections import defaultdict
 
+# Initiate parameters
+INITIAL_TEMP = 100.0
+COOLING_RATE = 0.999
+MAX_ITERATION = 10000
+TIME_LIMIT = 20
+
+
 # Input function to read problem data
 def read_input():
     """
@@ -88,7 +95,7 @@ def select_neighbor(schedule, subjects, periods, conflicting_idxs, temperature):
     return new_schedule
 
 # Simulated Annealing Algorithm
-def simulated_annealing(classes, subjects, periods, start_time, max_iterations=10000, initial_temp=100):
+def simulated_annealing(classes, subjects, periods, start_time, max_iterations=MAX_ITERATION, initial_temp=INITIAL_TEMP):
     """
     Perform Simulated Annealing to find an optimal schedule.
     - Generates an initial random solution and improves it iteratively.
@@ -112,7 +119,7 @@ def simulated_annealing(classes, subjects, periods, start_time, max_iterations=1
     for it in range(max_iterations):
         end_time = time.time()
         # Termination condition: no conflicts or time limit exceeded
-        if not conflicting_idxs or end_time - start_time > 20.0:
+        if not conflicting_idxs or end_time - start_time > TIME_LIMIT:
             break
 
         # Generate a new neighbor schedule
@@ -127,7 +134,7 @@ def simulated_annealing(classes, subjects, periods, start_time, max_iterations=1
         print("Iteration:", it + 1, ", Score:", current_score, ", Conflicts:", len(conflicting_idxs))
 
         # Cooling schedule: decrease temperature
-        temp *= 0.999
+        temp *= COOLING_RATE
 
     return schedule, current_score
 
