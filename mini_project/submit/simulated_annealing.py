@@ -5,10 +5,9 @@ from collections import defaultdict
 
 # Initiate parameters
 INITIAL_TEMP = 100.0
-COOLING_RATE = 0.999
+COOLING_RATE = 0.99
 MAX_ITERATION = 10000
 TIME_LIMIT = 20
-
 
 # Input function to read problem data
 def read_input():

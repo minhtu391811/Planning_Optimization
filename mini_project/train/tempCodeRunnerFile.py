@@ -1,2 +1,1 @@
-
-    for _ in range(iterations):
+idx = random.randint(0, len(schedule) - 1)

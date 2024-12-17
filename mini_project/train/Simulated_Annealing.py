@@ -1,139 +1,163 @@
-# Simulated Annealing
 import random
 import time
-import sys
 import math
 from collections import defaultdict
 
+# Initiate parameters
+INITIAL_TEMP = 100.0
+COOLING_RATE = 0.99
+MAX_ITERATION = 1000
+TIME_LIMIT = 20
+
+# Input function to read problem data
 def read_input():
     """
-    Đọc dữ liệu đầu vào từ người dùng theo định dạng:
-    - Dòng đầu: T, N, M (số giáo viên, lớp học, môn học)
-    - Tiếp theo N dòng: Danh sách các môn mà lớp i cần phải học, kết thúc bởi 0
-    - Tiếp theo T dòng: Danh sách các môn mà giáo viên t có thể dạy, kết thúc bởi 0
-    - Cuối cùng: Danh sách số tiết của mỗi môn d(m) (m = 1, ..., M)
+    Read input data:
+    - First line: T, N, M (number of teachers, classes, subjects)
+    - Next N lines: List of subjects each class needs (ends with 0)
+    - Next T lines: List of subjects each teacher can teach (ends with 0)
+    - Final line: Number of periods required for each subject d(m) (m = 1, ..., M)
     """
+    T, N, M = map(int, input().split())  # Number of teachers, classes, and subjects
 
-    # Đọc số lượng giáo viên, lớp, môn
-    [T, N, M] = [int(i) for i in sys.stdin.readline().split()]
+    # Reading subject requirements for each class
+    classes = {i: list(map(int, input().split()))[:-1] for i in range(1, N + 1)}
 
-    # Đọc danh sách môn học của mỗi lớp
-    classes = {}
-    for i in range(1, N + 1):
-        data = [int(i) for i in sys.stdin.readline().split()]
-        classes[i] = data[:-1] # bỏ số 0 cuối
-
-    # Đọc danh sách môn học mà mỗi giáo viên có thể dạy
+    # Reading teachers' subject capabilities and building a subject-to-teachers mapping
     teachers = {}
-    # Danh sách giáo viên có thể dạy môn học
     subjects = defaultdict(list)
-    for i in range(1, T + 1):
-        data = [int(i) for i in sys.stdin.readline().split()]
-        teachers[i] = data[:-1] # bỏ số 0 cuối
-        for sub in teachers[i]:
-            subjects[sub].append(i)
+    for t in range(1, T + 1):
+        data = list(map(int, input().split()))[:-1]
+        teachers[t] = data  # Subjects the teacher can teach
+        for sub in data:
+            subjects[sub].append(t)  # Add teacher to the list of available teachers for a subject
 
-    # Đọc số tiết của mỗi môn
-    periods = defaultdict(list)
-    data = [int(i) for i in sys.stdin.readline().split()]
-    for i in range(1, M + 1):
-        periods[i] = data[i - 1]
+    # Reading the number of periods required for each subject
+    periods = {i + 1: int(p) for i, p in enumerate(map(int, input().split()))}
 
     return T, N, M, classes, teachers, subjects, periods
 
-T, N, M, classes, teachers, subjects, periods = read_input()
-max_score = 0
-for i in range(1, N + 1):
-    max_score += len(classes[i])
-print("max_score =", max_score)
+# Evaluation function to check for conflicts
+def evaluate(schedule, periods):
+    """
+    Evaluate the schedule for class and teacher overlaps.
+    - Returns:
+        - Score: Number of non-conflicting assignments
+        - List of conflicting indices
+    """
+    assigned_classes = defaultdict(list)  # Tracks assigned slots for each class
+    assigned_teachers = defaultdict(list)  # Tracks assigned slots for each teacher
+    conflicting_idxs = []  # Tracks indices of conflicting assignments
 
-# Định nghĩa hàm đánh giá
-def evaluate(schedule, classes, teachers, periods):
-    score = 0
-    assigned_classes = defaultdict(list)
-    assigned_teachers = defaultdict(list)
-    for (cls, sub, start, teacher) in schedule:
-        d = periods[sub]
-        # Kiểm tra chồng lấn thời khóa biểu trong cùng lớp hoặc cùng giáo viên
-        for (su, s) in assigned_classes[cls]:
-            d1 = periods[su]
-            if start <= s < start + d or s <= start < s + d1:
-                continue
-            
-        for (su, s) in assigned_teachers[teacher]:
-            d1 = periods[su]
-            if start <= s < start + d or s <= start < s + d1:
-                continue
+    for idx, (cls, sub, start, teacher) in enumerate(schedule):
+        duration = periods[sub]  # Duration of the subject
 
+        # Check for class conflicts
+        if any(not (start >= s + periods[su] or s >= start + duration) for su, s in assigned_classes[cls]):
+            conflicting_idxs.append(idx)
+            continue
+
+        # Check for teacher conflicts
+        if any(not (start >= s + periods[su] or s >= start + duration) for su, s in assigned_teachers[teacher]):
+            conflicting_idxs.append(idx)
+            continue
+
+        # Assign time slot to class and teacher if no conflicts exist
         assigned_classes[cls].append((sub, start))
         assigned_teachers[teacher].append((sub, start))
-        score += 1
-    return score
 
-# Tìm kiếm lân cận
-def neighbor(schedule, classes, teachers, periods, T):
-    current_score = evaluate(schedule, classes, teachers, periods)
-    new_schedule = schedule[:]
-    idx = random.randint(0, len(new_schedule) - 1)
-    cls, sub, start, teacher = new_schedule[idx]
-    
-    # Thay đổi ngẫu nhiên lớp, môn, giáo viên hoặc thời gian bắt đầu
-    new_start = 6 * random.randint(0, 9) + random.randint(1, 7 - periods[sub])
-    new_teacher = random.choice(subjects[sub])
-    new_schedule[idx] = (cls, sub, new_start, new_teacher)
-    new_score = evaluate(new_schedule, classes, teachers, periods)
-    
-    if new_score > current_score:
-        return new_schedule
+    # Score is the number of non-conflicting schedules
+    score = len(schedule) - len(conflicting_idxs)
+    return score, conflicting_idxs
+
+# Generate a neighboring schedule by modifying conflicts
+def select_neighbor(schedule, subjects, periods, conflicting_idxs, temperature):
+    """
+    Generate a new (neighbor) schedule by modifying a conflicting or random entry.
+    - Uses random assignment for start time and teacher.
+    """
+    new_schedule = schedule[:]  # Create a copy of the current schedule
+
+    # Select an index to modify: prioritize conflicts if available
+    if random.random() < 0.5 and conflicting_idxs:  # Prioritize conflicts
+        idx = random.choice(conflicting_idxs)
     else:
-        prob = math.exp(-(new_score - current_score) / T);
-        
-        if random.randint(0, 1) < prob:
-            return new_schedule
-        else: 
-            return schedule
+        idx = random.randint(0, len(schedule) - 1)
+    
+    # idx = random.randint(0, len(schedule) - 1)
+    
+    # idx = random.choice(conflicting_idxs)
 
-# Thuật toán Simulated Annealing
-def simulated_annealing(classes, teachers, subjects, periods, max_iterations=1000, temp=100):
-    # Tạo lịch khởi tạo ban đầu
+    cls, sub, _, _ = new_schedule[idx]
+
+    # Generate a new random start time and teacher for the selected class/subject
+    new_start = 6 * random.randint(0, 9) + random.randint(1, 7 - periods[sub])  # Random start time
+    new_teacher = random.choice(subjects[sub])  # Randomly choose a teacher for the subject
+    new_schedule[idx] = (cls, sub, new_start, new_teacher)  # Replace the old assignment with new values
+
+    return new_schedule
+
+# Simulated Annealing Algorithm
+def simulated_annealing(classes, subjects, periods, start_time, max_iterations=MAX_ITERATION, initial_temp=INITIAL_TEMP):
+    """
+    Perform Simulated Annealing to find an optimal schedule.
+    - Generates an initial random solution and improves it iteratively.
+    """
+    # Generate an initial random schedule
     schedule = []
-    idx = 1
-    for cls in range(1, N + 1):
-        for sub in classes[cls]:
-            start = 6 * random.randint(0, 9) + random.randint(1, 7 - periods[sub])
-            if not subjects[sub]:
+    for cls, subjects_list in classes.items():
+        for sub in subjects_list:
+            if sub not in periods or not subjects[sub]:
                 continue
-            teacher = random.choice(subjects[sub])
+            start = 6 * random.randint(0, 9) + random.randint(1, 7 - periods[sub])  # Random start time
+            teacher = random.choice(subjects[sub])  # Random teacher
             schedule.append((cls, sub, start, teacher))
-    
-    current_score = evaluate(schedule, classes, teachers, periods)
-    
-    for _ in range(max_iterations):
-        new_schedule = neighbor(schedule, classes, teachers, periods, temp)
-        new_score = evaluate(new_schedule, classes, teachers, periods)
-        if new_score > current_score:
-            schedule = new_schedule
-            current_score = new_score
-            
-        if current_score == max_score:
+
+    # Initial evaluation
+    max_score = len(schedule)
+    current_score, conflicting_idxs = evaluate(schedule, periods)
+    temp = initial_temp  # Starting temperature for annealing
+
+    # Annealing loop
+    for it in range(max_iterations):
+        end_time = time.time()
+        # Termination condition: no conflicts or time limit exceeded
+        if not conflicting_idxs or end_time - start_time > TIME_LIMIT:
             break
-            
-        if temp > 0.01:
-            temp *= 0.99  # Giảm nhiệt độ
+
+        # Generate a new neighbor schedule
+        new_schedule = select_neighbor(schedule, subjects, periods, conflicting_idxs, temp)
+        new_score, new_conflicting_idxs = evaluate(new_schedule, periods)
+
+        # Acceptance criteria: accept better solutions or probabilistically worse solutions
+        if new_score > current_score or random.random() < math.exp((new_score - current_score) / temp):
+            schedule, current_score, conflicting_idxs = new_schedule, new_score, new_conflicting_idxs
+
+        # Log the progress for debugging
+        print("Iteration:", it + 1, ", Score:", current_score, ", Conflicts:", len(conflicting_idxs))
+
+        # Cooling schedule: decrease temperature
+        temp *= COOLING_RATE
 
     return schedule, current_score
 
-# Bắt đầu đo thời gian
-start_time = time.time()
+# Main Execution
+if __name__ == "__main__":
+    # Read input data
+    T, N, M, classes, teachers, subjects, periods = read_input()
 
-schedule, score = simulated_annealing(classes, teachers, subjects, periods)
+    # Run the simulated annealing algorithm
+    start_time = time.time()
+    best_schedule, score = simulated_annealing(classes, subjects, periods, start_time)
+    best_score, conflicting_idxs = evaluate(best_schedule, periods)
+    elapsed_time = time.time() - start_time
 
-# Kết thúc đo thời gian
-end_time = time.time()
-elapsed_time = end_time - start_time
+    # Print the final score and the non-conflicting schedule
+    print(score)
+    for idx in range(len(best_schedule)):
+        if idx not in conflicting_idxs:
+            cls, sub, start, teacher = best_schedule[idx]
+            print(cls, sub, start, teacher)
 
-print("Score:", score)
-print("Schedule:")
-for cls, sub, start, teacher in schedule:
-    print(cls, sub, start, teacher)
-print(f"Elapsed time: {elapsed_time:.4f} seconds")
+    # Print total execution time
+    print(f"Elapsed time: {elapsed_time:.4f} seconds")
